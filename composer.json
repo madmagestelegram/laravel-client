@@ -1,0 +1,30 @@
+{
+  "name": "madmagestelegram/laravel",
+  "type": "library",
+  "description": "Telegram bot integration with laravel",
+  "keywords": [
+    "laravel",
+    "telegram",
+    "bot",
+    "rpc"
+  ],
+  "license": "MIT",
+  "require": {
+    "php": "^7.2",
+    "madmagestelegram/client": "*",
+    "illuminate/support": "^5 || ^6 || ^7",
+    "illuminate/http": "^5 || ^6 || ^7"
+  },
+  "autoload": {
+    "psr-4": {
+      "MadmagesTelegram\\Laravel\\": "src/"
+    }
+  },
+  "extra": {
+    "laravel": {
+      "providers": [
+        "MadmagesTelegram\\Laravel\\ServiceProvider"
+      ]
+    }
+  }
+}
