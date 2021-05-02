@@ -34,9 +34,14 @@ class ServiceProvider extends \Illuminate\Support\ServiceProvider
         $this->app->singleton(
             Client::class,
             static function () {
-                $guzzleConfigs = config(self::CONFIG_FILE . '.guzzle_configs') ?? [];
+                $guzzleConfigs = config(self::CONFIG_FILE . '.guzzle_configs');
+                if (empty($guzzleConfigs)) {
+                    $client = null;
+                } else {
+                    $client = new \GuzzleHttp\Client($guzzleConfigs);
+                }
 
-                return new Client(config(self::CONFIG_FILE . '.token'), $guzzleConfigs);
+                return new Client(config(self::CONFIG_FILE . '.token'), $client);
             }
         );
 
