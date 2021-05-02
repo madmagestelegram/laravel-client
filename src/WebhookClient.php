@@ -16,7 +16,7 @@ class WebhookClient extends \MadmagesTelegram\Types\Client
      * @return mixed
      * @throws \JsonException
      */
-    public function _rawApiCall(string $method, array $parameters): JsonResponse
+    public function _apiCall(string $method, array $parameters): JsonResponse
     {
         $parameters['method'] = $method;
 

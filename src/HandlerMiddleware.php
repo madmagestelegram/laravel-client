@@ -29,7 +29,7 @@ class HandlerMiddleware
 
         // #2 - specific handler
         if ($this->foundHandler === null) {
-            foreach ($update->_getRawData() as $key => $value) {
+            foreach ($update->_getData() as $key => $value) {
                 if ($value === null) {
                     continue;
                 }
