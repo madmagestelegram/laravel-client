@@ -10,9 +10,7 @@ use RuntimeException;
 
 class HandlerMiddleware
 {
-    /** @var AbstractHandler */
-    private $foundHandler;
-    /** @var Container */
+    private ?AbstractHandler $foundHandler;
     private Container $container;
 
 
@@ -20,12 +18,12 @@ class HandlerMiddleware
     {
         $this->container = $container;
 
-        $handlers = $container->get(HandlerServiceProvider::SERVICE_HANDLERS);
+        $specificUpdateHandlers = $container->get(HandlerServiceProvider::SERVICE_SPECIFIC_UPDATE_HANDLERS);
         $defaultHandlers = $container->get(HandlerServiceProvider::SERVICE_DEFAULT_HANDLERS);
         $middlewareHandlers = $container->get(HandlerServiceProvider::SERVICE_MIDDLEWARE_HANDLERS);
 
         // #1 - middleware
-        $this->foundHandler = $this->checkForHandler($middlewareHandlers);
+        $this->foundHandler = $this->findHandler($middlewareHandlers);
 
         // #2 - specific handler
         if ($this->foundHandler === null) {
@@ -33,22 +31,23 @@ class HandlerMiddleware
                 if ($value === null) {
                     continue;
                 }
-                if (!empty($handlers[$key])) {
-                    $this->foundHandler = $this->checkForHandler($handlers[$key]);
-                    if ($this->foundHandler) {
-                        break;
-                    }
+
+                if (
+                    !empty($specificUpdateHandlers[$key])
+                    && $this->foundHandler = $this->findHandler($specificUpdateHandlers[$key])
+                ) {
+                    break;
                 }
             }
         }
 
         // #2 - default handler
         if ($this->foundHandler === null) {
-            $this->foundHandler = $this->checkForHandler($defaultHandlers);
+            $this->foundHandler = $this->findHandler($defaultHandlers);
         }
     }
 
-    private function checkForHandler(array $handlerClasses): ?AbstractHandler
+    private function findHandler(array $handlerClasses): ?AbstractHandler
     {
         foreach ($handlerClasses as $handlerClass) {
             /** @var AbstractHandler $handler */

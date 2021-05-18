@@ -1,8 +1,12 @@
 <?php declare(strict_types=1);
 
-namespace MadmagesTelegram\Laravel;
+namespace MadmagesTelegram\Laravel\Command;
 
 use Illuminate\Console\Command;
+use MadmagesTelegram\Laravel\Client;
+use MadmagesTelegram\Laravel\ServiceProvider;
+use MadmagesTelegram\Types\TelegramException;
+use function config;
 
 class SetWebhook extends Command
 {
@@ -26,8 +30,9 @@ class SetWebhook extends Command
      *
      * @param Client $client
      * @return mixed
+     * @throws TelegramException
      */
-    public function handle(Client $client)
+    public function handle(Client $client): int
     {
         $webhookPath = (string)config(ServiceProvider::CONFIG_FILE . '.route');
         $webhookHost = config(ServiceProvider::CONFIG_FILE . '.webhook_host');
@@ -39,8 +44,12 @@ class SetWebhook extends Command
             return 0;
         }
 
-        $result = $client->setWebhook($webhookPath);
-        echo "Telegram hook was set on url: {$webhookPath}";
+        if (($result = $client->setWebhook($webhookPath)) === true) {
+            echo "Telegram hook was set on url: {$webhookPath}";
+        } else {
+            echo "Webhook was not set!";
+        }
+
         return (int)!$result;
     }
 }

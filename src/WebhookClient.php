@@ -3,8 +3,12 @@
 namespace MadmagesTelegram\Laravel;
 
 use Illuminate\Http\JsonResponse;
-use MadmagesTelegram\Types\TypedClient;
+use MadmagesTelegram\Types\Serializer;
 
+/**
+ * Client, for sending responses during webhook request
+ * @link https://core.telegram.org/bots/api#making-requests-when-getting-updates
+ */
 class WebhookClient extends \MadmagesTelegram\Types\Client
 {
 
@@ -12,7 +16,7 @@ class WebhookClient extends \MadmagesTelegram\Types\Client
      * Method call handler
      *
      * @param string $method
-     * @param array  $parameters
+     * @param array $parameters
      * @return mixed
      * @throws \JsonException
      */
@@ -32,7 +36,7 @@ class WebhookClient extends \MadmagesTelegram\Types\Client
                     return;
                 }
 
-                $item = json_decode(TypedClient::serialize($item), true, 512, JSON_THROW_ON_ERROR);
+                $item = json_decode(Serializer::serialize($item), true, 512, JSON_THROW_ON_ERROR);
                 $item = array_filter($item);
             }
         );

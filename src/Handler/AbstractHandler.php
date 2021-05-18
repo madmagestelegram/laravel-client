@@ -10,12 +10,9 @@ use MadmagesTelegram\Types\Type\Update;
 abstract class AbstractHandler
 {
 
-    /** @var Update */
     protected Update $update;
-    /** @var WebhookClient */
-    protected $whClient;
-    /** @var Client */
-    protected $client;
+    protected WebhookClient $whClient;
+    protected Client $client;
 
     public function boot(Update $update, WebhookClient $webhookClient, Client $client): void
     {

@@ -2,27 +2,27 @@
 
 namespace MadmagesTelegram\Laravel\Handler\Command;
 
+use Generator;
 use Illuminate\Container\Container;
 use Illuminate\Http\JsonResponse;
 use MadmagesTelegram\Laravel\Handler\AbstractHandler;
 use MadmagesTelegram\Laravel\HandlerServiceProvider;
 use MadmagesTelegram\Laravel\ServiceProvider;
 use MadmagesTelegram\Types\Type\Message;
+use RuntimeException;
 
 class CommandHandler extends AbstractHandler
 {
 
-    /** @var AbstractCommand */
-    private $foundCommand;
-    /** @var bool */
+    private ?AbstractCommand $foundCommand = null;
     private bool $isPrivate;
     /** @var AbstractCommand[] */
-    private $commands;
-    private $shouldReact = true;
+    private array $commands;
+    private bool $isCommandForAnotherBot = false;
 
     public function __construct(Container $container)
     {
-        $this->commands = $container->get(HandlerServiceProvider::SERVICE_COMMANDS);
+        $this->commands = $container->get(HandlerServiceProvider::SERVICE_COMMAND_HANDLER_COMMANDS);
     }
 
     /**
@@ -45,63 +45,55 @@ class CommandHandler extends AbstractHandler
             $commands[$command->getName()] = $command;
         }
 
-        try {
-            foreach ($this->getCommands() as [$commandName, $isPrivate]) {
-                if (isset($commands[$commandName])) {
-                    $this->foundCommand = $commands[$commandName];
-                    $this->isPrivate = $isPrivate;
-                    return true;
-                }
+        foreach ($this->getCommands() as [$commandName, $isPrivate]) {
+            if (isset($commands[$commandName])) {
+                $this->foundCommand = $commands[$commandName];
+                $this->isPrivate = $isPrivate;
+
+                return true;
             }
-        } catch (\Throwable $exception) {
-            $this->foundCommand = null;
-            return true;
         }
 
-        if (!$this->shouldReact) {
+        if ($this->isCommandForAnotherBot) {
+            // Dot not pass this update for another handlers
             return true;
         }
 
         return false;
     }
 
-    private function getCommands(): \Generator
+    private function getCommands(): Generator
     {
         /** @var Message $message */
         $message = $this->update->getMessage();
         $chatType = $message->getChat()->getType();
+        if (!in_array($chatType, ['group', 'supergroup', 'private'], true)) {
+            return;
+        }
+
         $botName = config(ServiceProvider::CONFIG_FILE . '.bot_name');
 
         foreach ($message->getEntities() as $entity) {
-            if ($entity->getType() === 'bot_command') {
-                $rawCommand = substr($message->getText(), $entity->getOffset(), $entity->getLength());
-                if ($rawCommand[0] !== '/') {
-                    throw new \RuntimeException(
-                        "Unexpected command start char:  expecting '/' got '{$rawCommand[0]}'"
-                    );
-                }
-                $trimmedCommand = ltrim($rawCommand, '/');
+            if ($entity->getType() !== 'bot_command') {
+                continue;
+            }
 
-                if ($chatType === 'private') {
-                    $this->shouldReact = true;
-                    yield [$trimmedCommand, true];
+            $rawCommand = substr($message->getText(), $entity->getOffset(), $entity->getLength());
+            if ($rawCommand[0] !== '/') {
+                throw new RuntimeException("Unexpected command start char: Expecting '/' got '{$rawCommand[0]}'");
+            }
+            $trimmedCommand = ltrim($rawCommand, '/');
+
+            if ($chatType === 'private') {
+                yield [$trimmedCommand, true];
+            } elseif (strpos($trimmedCommand, '@') !== false) {
+                [$commandName, $botNameInCommand] = explode('@', $trimmedCommand);
+                $this->isCommandForAnotherBot = $botNameInCommand !== $botName;
+                if ($this->isCommandForAnotherBot) {
+                    break;
                 }
 
-                if (in_array($chatType, ['group', 'supergroup'], true)) {
-                    if (strpos($trimmedCommand, '@') !== false) {
-                        [$commandName, $botNameInCommand] = explode('@', $trimmedCommand);
-                        if ($botNameInCommand !== $botName) {
-                            $this->shouldReact = false;
-                            break;
-                        }
-
-                        $this->shouldReact = true;
-                        yield [$commandName, false];
-                    } else {
-                        $this->shouldReact = false;
-                        break;
-                    }
-                }
+                yield [$commandName, false];
             }
         }
     }
