@@ -10,23 +10,27 @@ use RuntimeException;
 
 class HandlerMiddleware
 {
-    private ?AbstractHandler $foundHandler;
     private Container $container;
 
-
-    public function __construct(Update $update, Container $container)
+    public function __construct(Container $container)
     {
         $this->container = $container;
+    }
 
-        $specificUpdateHandlers = $container->get(HandlerServiceProvider::SERVICE_SPECIFIC_UPDATE_HANDLERS);
-        $defaultHandlers = $container->get(HandlerServiceProvider::SERVICE_DEFAULT_HANDLERS);
-        $middlewareHandlers = $container->get(HandlerServiceProvider::SERVICE_MIDDLEWARE_HANDLERS);
+    public function handle(): JsonResponse
+    {
+        $specificUpdateHandlers = $this->container->get(HandlerServiceProvider::SERVICE_SPECIFIC_UPDATE_HANDLERS);
+        $defaultHandlers = $this->container->get(HandlerServiceProvider::SERVICE_DEFAULT_HANDLERS);
+        $middlewareHandlers = $this->container->get(HandlerServiceProvider::SERVICE_MIDDLEWARE_HANDLERS);
+
+        /** @var Update $update */
+        $update = $this->container->get(Update::class);
 
         // #1 - middleware
-        $this->foundHandler = $this->findHandler($middlewareHandlers);
+        $foundHandler = $this->findHandler($middlewareHandlers);
 
         // #2 - specific handler
-        if ($this->foundHandler === null) {
+        if ($foundHandler === null) {
             foreach ($update->_getData() as $key => $value) {
                 if ($value === null) {
                     continue;
@@ -34,7 +38,7 @@ class HandlerMiddleware
 
                 if (
                     !empty($specificUpdateHandlers[$key])
-                    && $this->foundHandler = $this->findHandler($specificUpdateHandlers[$key])
+                    && $foundHandler = $this->findHandler($specificUpdateHandlers[$key])
                 ) {
                     break;
                 }
@@ -42,9 +46,21 @@ class HandlerMiddleware
         }
 
         // #2 - default handler
-        if ($this->foundHandler === null) {
-            $this->foundHandler = $this->findHandler($defaultHandlers);
+        if ($foundHandler === null) {
+            $foundHandler = $this->findHandler($defaultHandlers);
         }
+
+
+        if ($foundHandler !== null) {
+            $response = $this->container->call([$foundHandler, 'execute']);
+            if ($response) {
+                return $response;
+            }
+
+            return response()->json();
+        }
+
+        throw new RuntimeException('Telegram request not handled');
     }
 
     private function findHandler(array $handlerClasses): ?AbstractHandler
@@ -59,19 +75,5 @@ class HandlerMiddleware
         }
 
         return null;
-    }
-
-    public function handle(): JsonResponse
-    {
-        if ($this->foundHandler !== null) {
-            $response = $this->container->call([$this->foundHandler, 'execute']);
-            if ($response) {
-                return $response;
-            }
-
-            return response()->json();
-        }
-
-        throw new RuntimeException('Request not handled');
     }
 }

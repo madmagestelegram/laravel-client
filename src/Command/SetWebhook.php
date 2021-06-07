@@ -44,8 +44,8 @@ class SetWebhook extends Command
             return 0;
         }
 
-        if (($result = $client->setWebhook($webhookPath)) === true) {
-            echo "Telegram hook was set on url: {$webhookPath}";
+        if (($result = $client->setWebhook($finalUrl)) === true) {
+            echo "Telegram hook was set on url: {$finalUrl}";
         } else {
             echo "Webhook was not set!";
         }
